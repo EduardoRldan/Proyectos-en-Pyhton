@@ -140,3 +140,4 @@ lbl_mensaje.pack()
 
 # Ejecutar la aplicación
 root.mainloop()
+
