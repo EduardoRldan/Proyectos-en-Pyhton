@@ -1,65 +1,43 @@
 import random
 import re
 import nltk
+import spacy
+from textblob import TextBlob
 from nltk.chat.util import Chat, reflections
-
-nltk.download('punkt')
-
-pares = [
-    (r"hola|hi|buenas", ["¡Hola! ¿Cómo puedo ayudarte?", "¡Hola! ¿En qué te puedo ayudar?"]),
-    (r"cómo estás|qué tal", ["Estoy bien, gracias por preguntar 😊", "Muy bien, ¿y tú?"]),
-    (r"cuál es tu nombre|cómo te llamas", ["Soy un chatbot creado en Python. ¿Y tú?"]),
-    (r"adiós|bye|chau", ["¡Hasta luego! 😊", "Nos vemos pronto. 👋"]),
-    (r"(.*) tu creador", ["Fui creado por un desarrollador que usa Python."]),
-    (r"(.*) (tu edad|cuántos años tienes)", ["Soy un programa, así que no tengo edad."]),
-    (r"(.*) ayuda", ["Claro, dime en qué necesitas ayuda."]),
-    (r"(.*)", ["Lo siento, no entiendo esa pregunta. ¿Puedes reformularla? 🤖"])
-]
-
-chatbot = Chat(pares, reflections)
-
-print("🤖 Chatbot: ¡Hola! Escribe 'salir' para terminar la conversación.")
-while True:
-    entrada = input("Tú: ").lower()
-    if entrada == "salir":
-        print("🤖 Chatbot: ¡Hasta luego! 👋")
-        break
-    respuesta = chatbot.respond(entrada)
-    print(f"🤖 Chatbot: {respuesta}")
-import random
-import re
-import nltk
-import pyttsx3
 from datetime import datetime
-from nltk.chat.util import Chat, reflections
-from nltk.corpus import wordnet
+import pyttsx3
 
-# Descargar recursos de NLTK (si no están descargados)
-nltk.download('punkt')
-nltk.download('wordnet')
+# Cargar modelo de lenguaje en español
+nlp = spacy.load("es_core_news_sm")
 
 # Inicializar el motor de texto a voz
 engine = pyttsx3.init()
 engine.setProperty('rate', 150)  # Velocidad del habla
 engine.setProperty('volume', 1)  # Volumen
 
-# Función para que el chatbot hable
 def speak(text):
     engine.say(text)
     engine.runAndWait()
 
-# Función para encontrar sinónimos de palabras
-def obtener_sinonimos(palabra):
-    sinonimos = set()
-    for syn in wordnet.synsets(palabra):
-        for lemma in syn.lemmas():
-            sinonimos.add(lemma.name())
-    return list(sinonimos)
+# Función para analizar el sentimiento del usuario
+def analizar_sentimiento(texto):
+    blob = TextBlob(texto)
+    sentimiento = blob.sentiment.polarity  # Valor entre -1 (negativo) y 1 (positivo)
+    if sentimiento > 0:
+        return "Veo que estás contento 😊"
+    elif sentimiento < 0:
+        return "Parece que no estás teniendo un buen día 😟"
+    else:
+        return "Entiendo, dime más."
 
-# Definir pares de preguntas y respuestas con mejor comprensión
+# Función para procesar el mensaje
+def procesar_texto(texto):
+    doc = nlp(texto)
+    return " ".join([token.lemma_ for token in doc])
+
 pares = [
     (r"hola|hi|buenas|qué tal", ["¡Hola! ¿Cómo puedo ayudarte?", "¡Hola! ¿Cómo estás hoy?"]),
-    (r"cómo estás|qué tal", ["Estoy bien, gracias por preguntar 😊", "¡Me siento genial! ¿Y tú?"]),
+    (r"cómo estás|qué tal", ["Estoy bien, gracias por preguntar 😊", "¡Me siento genial! ¿Y tú?", analizar_sentimiento]),
     (r"cuál es tu nombre|cómo te llamas", ["Soy un chatbot creado en Python. ¿Y tú?"]),
     (r"qué hora es|dime la hora", [lambda: f"Son las {datetime.now().strftime('%H:%M')}."]),
     (r"qué día es hoy|dime la fecha", [lambda: f"Hoy es {datetime.now().strftime('%A, %d de %B del %Y')}."]),
@@ -73,12 +51,13 @@ pares = [
 # Crear el chatbot
 chatbot = Chat(pares, reflections)
 
-# Iniciar la conversación
 print("🤖 Chatbot: ¡Hola! Escribe 'salir' para terminar la conversación.")
 speak("¡Hola! Escribe salir para terminar la conversación.")
 
 while True:
     entrada = input("Tú: ").lower()
+    entrada = procesar_texto(entrada)  # Procesar entrada con NLP
+    
     if entrada == "salir":
         print("🤖 Chatbot: ¡Hasta luego! 👋")
         speak("Hasta luego")
@@ -86,9 +65,8 @@ while True:
 
     respuesta = chatbot.respond(entrada)
     
-    # Si la respuesta es una función, se ejecuta
     if callable(respuesta):
-        respuesta = respuesta()
+        respuesta = respuesta(entrada)  # Si es función, la ejecuta
     
     print(f"🤖 Chatbot: {respuesta}")
     speak(respuesta)

@@ -1,36 +1,41 @@
 import cv2
+import dlib
 
-cascade_rostro = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
+# Cargar el detector de rostros y el predictor de landmarks
+detector = dlib.get_frontal_face_detector()
+predictor = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")  # Ruta al modelo
 
+# Iniciar la cámara
 camara = cv2.VideoCapture(0)
 
-if not camara.isOpened():
-    print("Error: No se puede acceder a la cámara. ")
-    exit()
-
 while True:
-    ret, frame = camara.read()
-    if not ret:
-        print("Error al momento de la captura del frame. ")
-        break
+    # Capturar frame de la cámara
+    _, frame = camara.read()
+    gris = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)  # Convertir a escala de grises
+    
+    # Detectar rostros
+    rostros = detector(gris)
 
+    for rostro in rostros:
+        # Dibujar el rectángulo del rostro
+        x, y, w, h = rostro.left(), rostro.top(), rostro.width(), rostro.height()
+        cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
 
-    gris = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)  # Convertidor a escala de grises
+        # Obtener los puntos clave del rostro
+        landmarks = predictor(gris, rostro)
 
-    # Detector de rostros
-    rostros = cascade_rostro.detectMultiScale(gris, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
+        # Dibujar los puntos clave en la cara
+        for i in range(68):
+            x, y = landmarks.part(i).x, landmarks.part(i).y
+            cv2.circle(frame, (x, y), 2, (0, 0, 255), -1)
 
-    # Dibujado del rectangulo 
-    for (x,y,w,h) in rostros:
-        cv2.rectangle(frame, (x ,y), (x + w, y + h), (0 , 255, 0,2))
+    # Mostrar el video en una ventana
+    cv2.imshow("Reconocimiento Facial con Landmarks", frame)
 
-    # Mostrar el video en pantalla
-    cv2.imshow("Detector Facial", frame)
-
-    # Presionar la letra q para salir del programa 
+    # Presionar "q" para salir
     if cv2.waitKey(1) & 0xFF == ord("q"):
         break
 
-# Liberar la cámara y cierre del programa
+# Liberar la cámara y cerrar ventanas
 camara.release()
 cv2.destroyAllWindows()
