@@ -1,38 +1,27 @@
 import cv2
-import dlib
+import mediapipe as mp
 
-# Cargar el detector de rostros y el predictor de landmarks
-detector = dlib.get_frontal_face_detector()
-predictor = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")  # Ruta al modelo
+# Inicializar Mediapipe para detección de landmarks faciales
+mp_face_mesh = mp.solutions.face_mesh
+face_mesh = mp_face_mesh.FaceMesh(static_image_mode=False, max_num_faces=1)
 
 # Iniciar la cámara
 camara = cv2.VideoCapture(0)
 
 while True:
-    # Capturar frame de la cámara
     _, frame = camara.read()
-    gris = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)  # Convertir a escala de grises
-    
-    # Detectar rostros
-    rostros = detector(gris)
+    frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    resultados = face_mesh.process(frame_rgb)
 
-    for rostro in rostros:
-        # Dibujar el rectángulo del rostro
-        x, y, w, h = rostro.left(), rostro.top(), rostro.width(), rostro.height()
-        cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+    if resultados.multi_face_landmarks:
+        for face_landmarks in resultados.multi_face_landmarks:
+            for landmark in face_landmarks.landmark:
+                x = int(landmark.x * frame.shape[1])
+                y = int(landmark.y * frame.shape[0])
+                cv2.circle(frame, (x, y), 2, (0, 255, 0), -1)
 
-        # Obtener los puntos clave del rostro
-        landmarks = predictor(gris, rostro)
+    cv2.imshow("Reconocimiento Facial con Mediapipe", frame)
 
-        # Dibujar los puntos clave en la cara
-        for i in range(68):
-            x, y = landmarks.part(i).x, landmarks.part(i).y
-            cv2.circle(frame, (x, y), 2, (0, 0, 255), -1)
-
-    # Mostrar el video en una ventana
-    cv2.imshow("Reconocimiento Facial con Landmarks", frame)
-
-    # Presionar "q" para salir
     if cv2.waitKey(1) & 0xFF == ord("q"):
         break
 
