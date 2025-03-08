@@ -57,3 +57,7 @@ cv2.destroyAllWindows()
 # 3. Puntos de landmarks más pequeños para mayor fluidez (línea 31).
 
 # Esto hace que tu programa sea más rápido y eficiente, sin perder precisión. 🚀
+
+
+# Cosas que mejorar 
+# 1. Rendimiento (sobre todo el rendimiento)
